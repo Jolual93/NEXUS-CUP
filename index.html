@@ -23,6 +23,28 @@ body::after{content:'';position:fixed;top:0;left:0;right:0;height:2px;background
 ::-webkit-scrollbar{width:6px;height:6px} ::-webkit-scrollbar-track{background:var(--bg-base)} ::-webkit-scrollbar-thumb{background:var(--border-glow);border-radius:3px}
 .app-wrapper{position:relative;z-index:1;max-width:1400px;margin:0 auto;padding:24px 16px 60px}
 
+/* LOGIN SCREEN */
+.login-screen{position:fixed;inset:0;background:var(--bg-void);z-index:9000;display:flex;align-items:center;justify-content:center;padding:20px}
+.login-screen::before{content:'';position:fixed;inset:0;background-image:repeating-linear-gradient(0deg,transparent,transparent 39px,rgba(255,255,255,.015) 40px),repeating-linear-gradient(90deg,transparent,transparent 39px,rgba(255,255,255,.015) 40px);pointer-events:none}
+.login-box{background:var(--bg-card);border:1px solid var(--border-glow);border-radius:var(--radius-lg);padding:40px 36px;width:100%;max-width:380px;box-shadow:0 0 60px rgba(0,180,255,.12),0 20px 60px rgba(0,0,0,.8);position:relative;z-index:1}
+.login-logo{text-align:center;margin-bottom:28px}
+.login-logo h1{font-family:var(--font-display);font-size:36px;font-weight:700;background:linear-gradient(135deg,#fff 0%,var(--electric) 50%,var(--violet-glow) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:-1px;margin-bottom:4px}
+.login-logo p{font-family:var(--font-display);font-size:9px;letter-spacing:3px;color:var(--text-muted);text-transform:uppercase}
+.login-field{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.login-field label{font-family:var(--font-display);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--text-secondary)}
+.login-field input{background:var(--bg-base);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-primary);font-size:15px;padding:11px 14px;outline:none;transition:border-color .2s,box-shadow .2s;font-family:var(--font-body)}
+.login-field input:focus{border-color:var(--electric);box-shadow:0 0 0 3px rgba(0,180,255,.12)}
+.login-btn{width:100%;background:linear-gradient(135deg,var(--electric2),var(--electric));color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-display);font-size:12px;letter-spacing:2px;text-transform:uppercase;padding:13px;cursor:pointer;font-weight:700;margin-top:8px;transition:all .2s;box-shadow:0 2px 14px rgba(0,180,255,.35)}
+.login-btn:hover{box-shadow:0 4px 22px rgba(0,180,255,.6);filter:brightness(1.1)}
+.login-error{background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);border-radius:var(--radius-sm);color:var(--red);font-size:12px;padding:8px 12px;margin-top:10px;font-family:var(--font-display);letter-spacing:.5px;display:none;text-align:center}
+.login-error.show{display:block}
+.login-user-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(0,180,255,.1);border:1px solid rgba(0,180,255,.25);border-radius:20px;padding:4px 12px;font-family:var(--font-display);font-size:9px;letter-spacing:1px;color:var(--electric);text-transform:uppercase}
+/* sync indicator */
+.sync-indicator{position:fixed;bottom:24px;left:24px;display:flex;align-items:center;gap:8px;background:var(--bg-card);border:1px solid var(--border);border-radius:20px;padding:6px 14px;font-family:var(--font-display);font-size:9px;letter-spacing:1px;color:var(--text-muted);z-index:500;transition:all .3s}
+.sync-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.sync-ok   .sync-dot{background:var(--green);box-shadow:0 0 6px var(--green)}
+.sync-saving .sync-dot{background:var(--amber);box-shadow:0 0 6px var(--amber);animation:dpulse 1s ease infinite}
+.sync-error .sync-dot{background:var(--red);box-shadow:0 0 6px var(--red)}
 /* HEADER */
 .header{text-align:center;padding:40px 0 32px}
 .header-badge{display:inline-block;font-family:var(--font-display);font-size:10px;letter-spacing:4px;color:var(--electric);background:rgba(0,180,255,.08);border:1px solid rgba(0,180,255,.25);padding:4px 14px;border-radius:20px;margin-bottom:14px;text-transform:uppercase}
@@ -355,9 +377,39 @@ td.pts-cell-0{color:var(--text-muted)!important}
 </style>
 </head>
 <body>
+<!-- LOGIN SCREEN -->
+<div class="login-screen" id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">
+      <h1>RAKION</h1>
+      <p>Tournament Organizer · Staff Access</p>
+    </div>
+    <div class="login-field">
+      <label>Usuario</label>
+      <input type="text" id="login-user" placeholder="Tu nombre de usuario" autocomplete="username">
+    </div>
+    <div class="login-field">
+      <label>Código de acceso</label>
+      <input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password">
+    </div>
+    <button class="login-btn" onclick="doLogin()">Ingresar →</button>
+    <div class="login-error" id="login-error">Usuario o código incorrecto.</div>
+  </div>
+</div>
+
+<!-- SYNC INDICATOR -->
+<div class="sync-indicator sync-ok" id="sync-indicator">
+  <div class="sync-dot"></div>
+  <span id="sync-label">Sincronizado</span>
+</div>
+
 <div class="app-wrapper">
 
 <header class="header">
+  <div style="position:absolute;top:0;right:0;display:flex;align-items:center;gap:10px;padding:8px">
+    <span class="login-user-badge" id="header-user-badge">—</span>
+    <button class="btn btn-ghost btn-sm" onclick="doLogout()" style="font-size:9px;padding:4px 10px">Salir</button>
+  </div>
   <div class="header-badge">Tournament Organizer v3.0</div>
   <h1>RAKION</h1>
   <p>Generador de Equipos Balanceados · Sorteo de Capitanes</p>
@@ -1111,7 +1163,8 @@ function finalizeDraw() {
     if (pen < bestPen) { bestPen = pen; best = teamArrays.map(a => [...a]); }
   }
 
-  teams = best.map((arr, i) => ({ name:`Equipo ${i+1}`, players: arr }));
+  const teamNames = generateTeamNames(nTeams);
+  teams = best.map((arr, i) => ({ name: teamNames[i], players: arr }));
   players.forEach(p => { p.isCaptain = captainIds.has(p.id); });
   leagueRounds = []; playoffState = null; // reset league when new teams generated
   save(); saveLeague();
@@ -1369,7 +1422,8 @@ function generateClassicTeams(deepSearch) {
     const pen = penalize(result, ideal);
     if (pen < bestPen) { bestPen=pen; best=result.map(a=>[...a]); }
   }
-  teams = best.map((arr,i)=>({name:`Equipo ${i+1}`,players:arr}));
+  const teamNames2 = generateTeamNames(nTeams);
+  teams = best.map((arr,i)=>({name:teamNames2[i],players:arr}));
   leagueRounds = []; playoffState = null;
   save(); saveLeague();
   editMode=false;
@@ -2472,9 +2526,264 @@ function renderPlayoffs() {
 }
 
 /* ==========================================================
+   TEAM NAME GENERATOR — funny gendered names
+   ========================================================== */
+const TEAM_NOUNS = [
+  { m:'Panzers',      f:'Panzers'      },
+  { m:'Golems',       f:'Golems'       },
+  { m:'Maguitos',     f:'Maguitas'     },
+  { m:'Chanchitos',   f:'Chanchitas'   },
+  { m:'Toritos',      f:'Toritas'      },
+  { m:'Dragocitos',   f:'Dragocitas'   },
+  { m:'Guerreritos',  f:'Guerreritas'  },
+  { m:'Arañitos',     f:'Arañitas'     },
+  { m:'Lobitos',      f:'Lobitas'      },
+  { m:'Vikingos',     f:'Vikingas'     },
+  { m:'Ninjas',       f:'Ninjas'       },
+  { m:'Magos',        f:'Magas'        },
+  { m:'Arqueros',     f:'Arqueras'     },
+  { m:'Guerreros',    f:'Guerreras'    },
+];
+// gender: 'm' | 'f'  (picked randomly per team)
+const TEAM_ADJS = [
+  { m:'Eróticos',      f:'Eróticas'      },
+  { m:'Desnutridos',   f:'Desnutridas'   },
+  { m:'Mancos',        f:'Mancas'        },
+  { m:'Inválidos',     f:'Inválidas'     },
+  { m:'Indigentes',    f:'Indigentes'    },
+  { m:'Jubilados',     f:'Jubiladas'     },
+  { m:'Precoces',      f:'Precoces'      },
+  { m:'Berrinchudos',  f:'Berrinchudas'  },
+  { m:'Malcriados',    f:'Malcriadas'    },
+  { m:'Revoltosos',    f:'Revoltosas'    },
+  { m:'Anónimos',      f:'Anónimas'      },
+  { m:'Sin Manos',     f:'Sin Manos'     },
+  { m:'Con Lag',       f:'Con Lag'       },
+  { m:'Ciegos',        f:'Ciegas'        },
+  { m:'Picantes',      f:'Picantes'      },
+  { m:'Adictos',       f:'Adictas'       },
+  { m:'Tóxicos',       f:'Tóxicas'       },
+  { m:'Dormidos',      f:'Dormidas'      },
+  { m:'Asustados',     f:'Asustadas'     },
+  { m:'Perdidos',      f:'Perdidas'      },
+];
+
+function generateTeamNames(n) {
+  // Pick n unique noun+adj combos
+  const nouns = shuffle([...TEAM_NOUNS]).slice(0, n);
+  const adjs  = shuffle([...TEAM_ADJS]).slice(0, n);
+  return nouns.map((noun, i) => {
+    const g    = Math.random() < .5 ? 'm' : 'f';
+    const adj  = adjs[i] || adjs[i % adjs.length];
+    return `${noun[g]} ${adj[g]}`;
+  });
+}
+
+/* ==========================================================
+   JSONBIN SYNC
+   ========================================================== */
+const JBIN_KEY    = '$2a$10$HCxcrV8/7ICfs0ENiHoerOYQ6t294pGUardJKi4uQacHZR/y4jIwa';
+const JBIN_BASE   = 'https://api.jsonbin.io/v3/b';
+let   JBIN_ID     = null;   // loaded from localStorage or created on first save
+let   syncTimer   = null;
+let   lastRemoteV = null;   // version hash to avoid overwriting own saves
+
+function setSyncStatus(state, label) {
+  const el = document.getElementById('sync-indicator');
+  const lb = document.getElementById('sync-label');
+  if (!el) return;
+  el.className = `sync-indicator sync-${state}`;
+  lb.textContent = label;
+}
+
+async function jbinEnsureId() {
+  if (JBIN_ID) return JBIN_ID;
+  // Check localStorage first
+  const stored = localStorage.getItem('rak3_jbin_id');
+  if (stored) { JBIN_ID = stored; return JBIN_ID; }
+  // Create new bin
+  try {
+    const res = await fetch(JBIN_BASE, {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json', 'X-Master-Key': JBIN_KEY, 'X-Bin-Name': 'rakion-torneo' },
+      body: JSON.stringify({ v:1 })
+    });
+    const data = await res.json();
+    JBIN_ID = data.metadata?.id || data.record?.id || null;
+    if (JBIN_ID) localStorage.setItem('rak3_jbin_id', JBIN_ID);
+  } catch(e) { console.error('JSONBin create error', e); }
+  return JBIN_ID;
+}
+
+async function syncPush() {
+  try {
+    setSyncStatus('saving', 'Guardando...');
+    await jbinEnsureId();
+    if (!JBIN_ID) { setSyncStatus('error','Sin ID'); return; }
+    const payload = buildSyncPayload();
+    const res = await fetch(`${JBIN_BASE}/${JBIN_ID}`, {
+      method: 'PUT',
+      headers: { 'Content-Type':'application/json', 'X-Master-Key': JBIN_KEY },
+      body: JSON.stringify(payload)
+    });
+    if (res.ok) {
+      const d = await res.json();
+      lastRemoteV = JSON.stringify(d.record || payload);
+      setSyncStatus('ok','Sincronizado');
+    } else { setSyncStatus('error','Error al guardar'); }
+  } catch(e) { setSyncStatus('error','Sin conexión'); }
+}
+
+async function syncPull() {
+  try {
+    await jbinEnsureId();
+    if (!JBIN_ID) return;
+    const res = await fetch(`${JBIN_BASE}/${JBIN_ID}/latest`, {
+      headers: { 'X-Master-Key': JBIN_KEY }
+    });
+    if (!res.ok) return;
+    const d    = await res.json();
+    const rec  = d.record;
+    const hash = JSON.stringify(rec);
+    if (hash === lastRemoteV) return; // no change
+    lastRemoteV = hash;
+    applySyncPayload(rec);
+    setSyncStatus('ok','Actualizado');
+  } catch(e) { /* silent */ }
+}
+
+function buildSyncPayload() {
+  return {
+    v: Date.now(),
+    players:      players,
+    weights:      weights,
+    captainIds:   [...captainIds],
+    teams:        teams,
+    bombos:       bombos,
+    leagueRounds: leagueRounds,
+    playoffState: playoffState,
+    streamers:    streamers,
+  };
+}
+
+function applySyncPayload(rec) {
+  if (!rec || !rec.v) return;
+  if (rec.players)      { players      = rec.players; }
+  if (rec.weights)      { weights      = rec.weights; }
+  if (rec.captainIds)   { captainIds   = new Set(rec.captainIds); }
+  if (rec.teams)        { teams        = rec.teams; }
+  if (rec.bombos)       { bombos       = rec.bombos; }
+  if (rec.leagueRounds) { leagueRounds = rec.leagueRounds; }
+  if (rec.playoffState !== undefined) { playoffState = rec.playoffState; }
+  if (rec.streamers)    { streamers    = rec.streamers; }
+
+  // Refresh all UI
+  renderPlayers();
+  refreshStats();
+  renderStreamerConfig();
+  const activeTab = document.querySelector('.tab-panel.active')?.id?.replace('tab-','');
+  if (activeTab === 'liga')     renderLeague();
+  if (activeTab === 'playoffs') renderPlayoffs();
+  if (activeTab === 'equipos')  { const ideal = players.reduce((s,p)=>s+p.lvl,0)/(teams.length||1); renderTeams(ideal); }
+  if (activeTab === 'bombos')   { renderBombos(); refreshCaptainBomboVisibility(); }
+  if (activeTab === 'capitanes'){ renderCaptainPool(); renderCaptainsSelected(); updateCaptainStatus(); }
+}
+
+// Override save() to also push to JSONBin
+const _origSave = save;
+function saveAndSync() {
+  // Write to localStorage
+  localStorage.setItem('rak3_players',  JSON.stringify(players));
+  localStorage.setItem('rak3_weights',  JSON.stringify(weights));
+  localStorage.setItem('rak3_captains', JSON.stringify([...captainIds]));
+  localStorage.setItem('rak3_teams',    JSON.stringify(teams));
+  // Debounced push
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(syncPush, 1200);
+}
+
+function saveLeagueAndSync() {
+  localStorage.setItem('rak3_league',   JSON.stringify(leagueRounds));
+  localStorage.setItem('rak3_playoffs', JSON.stringify(playoffState));
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(syncPush, 1200);
+}
+
+/* ==========================================================
+   LOGIN SYSTEM
+   ========================================================== */
+const USERS = {
+  'jolual':  'Jolual',
+  'galaxia': 'Galaxia',
+  'blasco':  'Blasco',
+  'coffee':  'Coffee',
+};
+// map user→display name
+const USER_DISPLAY = {
+  'jolual': 'Jolual', 'galaxia': 'Galaxia', 'blasco': 'Blasco', 'coffee': 'Coffee'
+};
+
+let currentUser = null;
+
+function doLogin() {
+  const u = document.getElementById('login-user').value.trim().toLowerCase();
+  const p = document.getElementById('login-pass').value.trim();
+  // case-insensitive check
+  const matchUser = Object.keys(USERS).find(k => k === u);
+  if (matchUser && USERS[matchUser].toLowerCase() === p.toLowerCase()) {
+    currentUser = matchUser;
+    localStorage.setItem('rak3_session', matchUser);
+    showApp();
+  } else {
+    const err = document.getElementById('login-error');
+    err.classList.add('show');
+    setTimeout(() => err.classList.remove('show'), 3000);
+  }
+}
+
+function doLogout() {
+  currentUser = null;
+  localStorage.removeItem('rak3_session');
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('login-user').value = '';
+  document.getElementById('login-pass').value = '';
+}
+
+function showApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  const badge = document.getElementById('header-user-badge');
+  if (badge) badge.textContent = '👤 ' + USER_DISPLAY[currentUser];
+  // Start polling every 10 seconds
+  syncPull();
+  setInterval(syncPull, 10000);
+}
+
+/* ==========================================================
    INIT
    ========================================================== */
-load();
+// Override save and saveLeague globally
+save      = saveAndSync;
+saveLeague = saveLeagueAndSync;
+
+// Enter key on login
+document.getElementById('login-pass').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
+document.getElementById('login-user').addEventListener('keydown', e => { if(e.key==='Enter') document.getElementById('login-pass').focus(); });
+
+// Check existing session
+(async () => {
+  const sess = localStorage.getItem('rak3_session');
+  if (sess && USERS[sess]) {
+    currentUser = sess;
+    // Load local data first for instant render
+    load();
+    showApp();
+    // Then pull latest from JSONBin
+    await syncPull();
+  } else {
+    // Still load local for offline
+    load();
+  }
+})();
 </script>
 </body>
 </html>
