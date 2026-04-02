@@ -2527,10 +2527,11 @@ function renderPlayoffs() {
 
 /* ==========================================================
    TEAM NAME GENERATOR — funny gendered names
+   El ADJETIVO determina el género. El sustantivo concuerda.
    ========================================================== */
 const TEAM_NOUNS = [
-  { m:'Panzers',      f:'Panzers'      },
-  { m:'Golems',       f:'Golems'       },
+  { m:'Panzers',      f:'Panzers'      },  // invariable
+  { m:'Golems',       f:'Golems'       },  // invariable
   { m:'Maguitos',     f:'Maguitas'     },
   { m:'Chanchitos',   f:'Chanchitas'   },
   { m:'Toritos',      f:'Toritas'      },
@@ -2539,28 +2540,30 @@ const TEAM_NOUNS = [
   { m:'Arañitos',     f:'Arañitas'     },
   { m:'Lobitos',      f:'Lobitas'      },
   { m:'Vikingos',     f:'Vikingas'     },
-  { m:'Ninjas',       f:'Ninjas'       },
+  { m:'Ninjas',       f:'Ninjas'       },  // invariable
   { m:'Magos',        f:'Magas'        },
   { m:'Arqueros',     f:'Arqueras'     },
   { m:'Guerreros',    f:'Guerreras'    },
+  { m:'Caballeros',   f:'Caballeras'   },
+  { m:'Piratas',      f:'Piratas'      },  // invariable
 ];
-// gender: 'm' | 'f'  (picked randomly per team)
+
 const TEAM_ADJS = [
   { m:'Eróticos',      f:'Eróticas'      },
   { m:'Desnutridos',   f:'Desnutridas'   },
   { m:'Mancos',        f:'Mancas'        },
   { m:'Inválidos',     f:'Inválidas'     },
-  { m:'Indigentes',    f:'Indigentes'    },
+  { m:'Indigentes',    f:'Indigentes'    },  // invariable
   { m:'Jubilados',     f:'Jubiladas'     },
-  { m:'Precoces',      f:'Precoces'      },
+  { m:'Precoces',      f:'Precoces'      },  // invariable
   { m:'Berrinchudos',  f:'Berrinchudas'  },
   { m:'Malcriados',    f:'Malcriadas'    },
   { m:'Revoltosos',    f:'Revoltosas'    },
   { m:'Anónimos',      f:'Anónimas'      },
-  { m:'Sin Manos',     f:'Sin Manos'     },
-  { m:'Con Lag',       f:'Con Lag'       },
+  { m:'Sin Manos',     f:'Sin Manos'     },  // invariable
+  { m:'Con Lag',       f:'Con Lag'       },  // invariable
   { m:'Ciegos',        f:'Ciegas'        },
-  { m:'Picantes',      f:'Picantes'      },
+  { m:'Picantes',      f:'Picantes'      },  // invariable
   { m:'Adictos',       f:'Adictas'       },
   { m:'Tóxicos',       f:'Tóxicas'       },
   { m:'Dormidos',      f:'Dormidas'      },
@@ -2569,14 +2572,31 @@ const TEAM_ADJS = [
 ];
 
 function generateTeamNames(n) {
-  // Pick n unique noun+adj combos
-  const nouns = shuffle([...TEAM_NOUNS]).slice(0, n);
-  const adjs  = shuffle([...TEAM_ADJS]).slice(0, n);
-  return nouns.map((noun, i) => {
-    const g    = Math.random() < .5 ? 'm' : 'f';
-    const adj  = adjs[i] || adjs[i % adjs.length];
-    return `${noun[g]} ${adj[g]}`;
-  });
+  const usedCombos = new Set();
+  const names = [];
+  const shuffledNouns = shuffle([...TEAM_NOUNS]);
+  const shuffledAdjs  = shuffle([...TEAM_ADJS]);
+
+  for (let i = 0; i < n; i++) {
+    // Pick noun and adj, cycling if not enough unique ones
+    const noun = shuffledNouns[i % shuffledNouns.length];
+    const adj  = shuffledAdjs[i  % shuffledAdjs.length];
+    // Gender is determined by adj pick position: alternate m/f
+    // But ensure noun+adj always agree in gender
+    const g = (i % 2 === 0) ? 'm' : 'f';
+    const name = `${noun[g]} ${adj[g]}`;
+    // Avoid exact duplicates
+    if (usedCombos.has(name) && n <= TEAM_NOUNS.length) {
+      // try other gender
+      const g2 = g === 'm' ? 'f' : 'm';
+      names.push(`${noun[g2]} ${adj[g2]}`);
+      usedCombos.add(`${noun[g2]} ${adj[g2]}`);
+    } else {
+      names.push(name);
+      usedCombos.add(name);
+    }
+  }
+  return names;
 }
 
 /* ==========================================================
@@ -2584,33 +2604,43 @@ function generateTeamNames(n) {
    ========================================================== */
 const JBIN_KEY    = '$2a$10$HCxcrV8/7ICfs0ENiHoerOYQ6t294pGUardJKi4uQacHZR/y4jIwa';
 const JBIN_BASE   = 'https://api.jsonbin.io/v3/b';
-let   JBIN_ID     = null;   // loaded from localStorage or created on first save
+
+// ⚠️ JBIN_ID_HARDCODED: todos los usuarios comparten este Bin.
+const JBIN_ID_HARDCODED = '69ce0073aaba882197b8c180';
+
+let   JBIN_ID     = JBIN_ID_HARDCODED || localStorage.getItem('rak3_jbin_id') || null;
 let   syncTimer   = null;
-let   lastRemoteV = null;   // version hash to avoid overwriting own saves
+let   lastRemoteV = null;
 
 function setSyncStatus(state, label) {
   const el = document.getElementById('sync-indicator');
   const lb = document.getElementById('sync-label');
   if (!el) return;
   el.className = `sync-indicator sync-${state}`;
-  lb.textContent = label;
+  if (lb) lb.textContent = label;
 }
 
 async function jbinEnsureId() {
   if (JBIN_ID) return JBIN_ID;
-  // Check localStorage first
-  const stored = localStorage.getItem('rak3_jbin_id');
-  if (stored) { JBIN_ID = stored; return JBIN_ID; }
-  // Create new bin
   try {
     const res = await fetch(JBIN_BASE, {
       method: 'POST',
-      headers: { 'Content-Type':'application/json', 'X-Master-Key': JBIN_KEY, 'X-Bin-Name': 'rakion-torneo' },
-      body: JSON.stringify({ v:1 })
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Master-Key': JBIN_KEY,
+        'X-Bin-Name':   'rakion-torneo',
+        'X-Bin-Private':'false'
+      },
+      body: JSON.stringify({ v: 1 })
     });
     const data = await res.json();
-    JBIN_ID = data.metadata?.id || data.record?.id || null;
-    if (JBIN_ID) localStorage.setItem('rak3_jbin_id', JBIN_ID);
+    JBIN_ID = data.metadata?.id || null;
+    if (JBIN_ID) {
+      localStorage.setItem('rak3_jbin_id', JBIN_ID);
+      // Show ID in console so admin can hardcode it
+      console.log('%c📌 JSONBin ID creado: ' + JBIN_ID, 'color:#f59e0b;font-size:14px;font-weight:bold');
+      console.log('%c⚠️ Copia este ID y ponlo en JBIN_ID_HARDCODED en el código para que todos los usuarios lo compartan.', 'color:#ef4444');
+    }
   } catch(e) { console.error('JSONBin create error', e); }
   return JBIN_ID;
 }
@@ -2619,37 +2649,45 @@ async function syncPush() {
   try {
     setSyncStatus('saving', 'Guardando...');
     await jbinEnsureId();
-    if (!JBIN_ID) { setSyncStatus('error','Sin ID'); return; }
+    if (!JBIN_ID) { setSyncStatus('error', 'Sin Bin ID'); return; }
     const payload = buildSyncPayload();
     const res = await fetch(`${JBIN_BASE}/${JBIN_ID}`, {
       method: 'PUT',
-      headers: { 'Content-Type':'application/json', 'X-Master-Key': JBIN_KEY },
+      headers: { 'Content-Type': 'application/json', 'X-Master-Key': JBIN_KEY },
       body: JSON.stringify(payload)
     });
     if (res.ok) {
       const d = await res.json();
       lastRemoteV = JSON.stringify(d.record || payload);
-      setSyncStatus('ok','Sincronizado');
-    } else { setSyncStatus('error','Error al guardar'); }
-  } catch(e) { setSyncStatus('error','Sin conexión'); }
+      setSyncStatus('ok', 'Sincronizado ✓');
+    } else {
+      setSyncStatus('error', 'Error al guardar');
+    }
+  } catch(e) {
+    setSyncStatus('error', 'Sin conexión');
+  }
 }
 
 async function syncPull() {
-  try {
-    await jbinEnsureId();
+  if (!JBIN_ID) {
+    // Try localStorage fallback
+    JBIN_ID = localStorage.getItem('rak3_jbin_id') || null;
     if (!JBIN_ID) return;
+  }
+  try {
     const res = await fetch(`${JBIN_BASE}/${JBIN_ID}/latest`, {
       headers: { 'X-Master-Key': JBIN_KEY }
     });
     if (!res.ok) return;
     const d    = await res.json();
     const rec  = d.record;
+    if (!rec || !rec.v) return;
     const hash = JSON.stringify(rec);
     if (hash === lastRemoteV) return; // no change
     lastRemoteV = hash;
     applySyncPayload(rec);
-    setSyncStatus('ok','Actualizado');
-  } catch(e) { /* silent */ }
+    setSyncStatus('ok', 'Actualizado ✓');
+  } catch(e) { /* silent — no connection */ }
 }
 
 function buildSyncPayload() {
