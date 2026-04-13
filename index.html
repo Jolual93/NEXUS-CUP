@@ -2527,25 +2527,28 @@ function renderPlayoffs() {
 
 /* ==========================================================
    TEAM NAME GENERATOR — funny gendered names
-   El ADJETIVO determina el género. El sustantivo concuerda.
+   Cada sustantivo tiene género BASE fijo (el del original).
+   El adjetivo SIEMPRE concuerda con ese género base.
    ========================================================== */
 const TEAM_NOUNS = [
-  { m:'Panzers',      f:'Panzers'      },  // invariable
-  { m:'Golems',       f:'Golems'       },  // invariable
-  { m:'Maguitos',     f:'Maguitas'     },
-  { m:'Chanchitos',   f:'Chanchitas'   },
-  { m:'Toritos',      f:'Toritas'      },
-  { m:'Dragocitos',   f:'Dragocitas'   },
-  { m:'Guerreritos',  f:'Guerreritas'  },
-  { m:'Arañitos',     f:'Arañitas'     },
-  { m:'Lobitos',      f:'Lobitas'      },
-  { m:'Vikingos',     f:'Vikingas'     },
-  { m:'Ninjas',       f:'Ninjas'       },  // invariable
-  { m:'Magos',        f:'Magas'        },
-  { m:'Arqueros',     f:'Arqueras'     },
-  { m:'Guerreros',    f:'Guerreras'    },
-  { m:'Caballeros',   f:'Caballeras'   },
-  { m:'Piratas',      f:'Piratas'      },  // invariable
+  // { word, gender:'m'|'f' }
+  // Masculinos originales
+  { word:'Panzers',     g:'m' },
+  { word:'Golems',      g:'m' },
+  { word:'Maguitos',    g:'m' },
+  { word:'Chanchitos',  g:'m' },  // chancho → masculino
+  { word:'Toritos',     g:'m' },  // toro → masculino
+  { word:'Dragocitos',  g:'m' },  // dragón → masculino
+  { word:'Guerreritos', g:'m' },  // guerrero → masculino
+  { word:'Arañitas',    g:'f' },  // araña → femenino
+  { word:'Lobitos',     g:'m' },  // lobo → masculino
+  { word:'Vikingos',    g:'m' },
+  { word:'Ninjas',      g:'m' },
+  { word:'Magos',       g:'m' },  // mago → masculino
+  { word:'Arqueros',    g:'m' },  // arquero → masculino
+  { word:'Guerreros',   g:'m' },
+  { word:'Caballeros',  g:'m' },
+  { word:'Piratas',     g:'m' },
 ];
 
 const TEAM_ADJS = [
@@ -2553,17 +2556,17 @@ const TEAM_ADJS = [
   { m:'Desnutridos',   f:'Desnutridas'   },
   { m:'Mancos',        f:'Mancas'        },
   { m:'Inválidos',     f:'Inválidas'     },
-  { m:'Indigentes',    f:'Indigentes'    },  // invariable
+  { m:'Indigentes',    f:'Indigentes'    },
   { m:'Jubilados',     f:'Jubiladas'     },
-  { m:'Precoces',      f:'Precoces'      },  // invariable
+  { m:'Precoces',      f:'Precoces'      },
   { m:'Berrinchudos',  f:'Berrinchudas'  },
   { m:'Malcriados',    f:'Malcriadas'    },
   { m:'Revoltosos',    f:'Revoltosas'    },
   { m:'Anónimos',      f:'Anónimas'      },
-  { m:'Sin Manos',     f:'Sin Manos'     },  // invariable
-  { m:'Con Lag',       f:'Con Lag'       },  // invariable
+  { m:'Sin Manos',     f:'Sin Manos'     },
+  { m:'Con Lag',       f:'Con Lag'       },
   { m:'Ciegos',        f:'Ciegas'        },
-  { m:'Picantes',      f:'Picantes'      },  // invariable
+  { m:'Picantes',      f:'Picantes'      },
   { m:'Adictos',       f:'Adictas'       },
   { m:'Tóxicos',       f:'Tóxicas'       },
   { m:'Dormidos',      f:'Dormidas'      },
@@ -2572,29 +2575,14 @@ const TEAM_ADJS = [
 ];
 
 function generateTeamNames(n) {
-  const usedCombos = new Set();
-  const names = [];
   const shuffledNouns = shuffle([...TEAM_NOUNS]);
   const shuffledAdjs  = shuffle([...TEAM_ADJS]);
-
+  const names = [];
   for (let i = 0; i < n; i++) {
-    // Pick noun and adj, cycling if not enough unique ones
     const noun = shuffledNouns[i % shuffledNouns.length];
     const adj  = shuffledAdjs[i  % shuffledAdjs.length];
-    // Gender is determined by adj pick position: alternate m/f
-    // But ensure noun+adj always agree in gender
-    const g = (i % 2 === 0) ? 'm' : 'f';
-    const name = `${noun[g]} ${adj[g]}`;
-    // Avoid exact duplicates
-    if (usedCombos.has(name) && n <= TEAM_NOUNS.length) {
-      // try other gender
-      const g2 = g === 'm' ? 'f' : 'm';
-      names.push(`${noun[g2]} ${adj[g2]}`);
-      usedCombos.add(`${noun[g2]} ${adj[g2]}`);
-    } else {
-      names.push(name);
-      usedCombos.add(name);
-    }
+    // Adjetivo concuerda SIEMPRE con el género base del sustantivo
+    names.push(`${noun.word} ${adj[noun.g]}`);
   }
   return names;
 }
